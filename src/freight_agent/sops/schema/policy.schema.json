@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/example/freight-agent/schemas/policy.schema.json",
+  "title": "Freight agent SOP policy block",
+  "description": "The schema of the ```policy block inside an SOP Markdown file. The prose and the front matter are not described here; the loader handles them separately.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["id"],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Unique inside the file. A client override refers to it.",
+        "minLength": 1
+      },
+      "description": {
+        "type": "string",
+        "description": "One line, for the people who read the procedure."
+      },
+      "when": {
+        "type": "object",
+        "description": "The conditions under which the step runs.",
+        "additionalProperties": false,
+        "properties": {
+          "delay_risk": { "$ref": "#/$defs/stringOrList" },
+          "delay_risk_changed": { "$ref": "#/$defs/stringOrList" },
+          "stage": { "$ref": "#/$defs/stringOrList" },
+          "load_type": { "$ref": "#/$defs/stringOrList" },
+          "client_id": { "$ref": "#/$defs/stringOrList" },
+          "event_type": { "$ref": "#/$defs/stringOrList" },
+          "no_open_request": { "$ref": "#/$defs/stringOrList" },
+          "never_acted": { "type": "string" },
+          "last_inbound_from": { "$ref": "#/$defs/stringOrList" },
+          "last_inbound_contains": { "type": "string" },
+          "open_request": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key"],
+            "properties": {
+              "key": { "type": "string" },
+              "status": { "enum": ["open", "answered", "cancelled"] },
+              "attempts": { "type": ["integer", "string"] },
+              "min_attempts": { "type": "integer" },
+              "max_attempts": { "type": "integer" },
+              "elapsed_since_last_ask_minutes": { "type": ["string", "number"] },
+              "responses_seen": { "type": "integer" }
+            }
+          },
+          "all": { "type": "array", "items": { "type": "object" } },
+          "any": { "type": "array", "items": { "type": "object" } },
+          "not": { "type": "object" }
+        }
+      },
+      "gate": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "const": "message_signals" },
+          "condition": { "type": ["string", "null"] },
+          "description": { "type": "string" }
+        }
+      },
+      "do": { "$ref": "#/$defs/action" },
+      "also": { "type": "array", "items": { "$ref": "#/$defs/action" } },
+      "effect": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "open_request": {
+            "type": "object",
+            "required": ["key"],
+            "additionalProperties": false,
+            "properties": {
+              "key": { "type": "string" },
+              "kind": { "type": "string" },
+              "addressed_to_role": { "type": "string" },
+              "attempts": { "type": "integer" }
+            }
+          },
+          "increment_attempts": {
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "required": ["key"],
+                "additionalProperties": false,
+                "properties": {
+                  "key": { "type": "string" },
+                  "by": { "type": "integer" }
+                }
+              }
+            ]
+          },
+          "close_request": {
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "required": ["key"],
+                "additionalProperties": false,
+                "properties": {
+                  "key": { "type": "string" },
+                  "answer": { "type": ["string", "null"] }
+                }
+              }
+            ]
+          },
+          "cancel_request": { "type": "string" },
+          "set_timer": {
+            "type": "object",
+            "required": ["request_key"],
+            "additionalProperties": false,
+            "properties": {
+              "request_key": { "type": "string" },
+              "fires_at": { "type": ["string", "null"] }
+            }
+          },
+          "set_delay_risk": { "type": "string" },
+          "set_stage": { "type": "string" },
+          "record_fact": {
+            "type": "object",
+            "required": ["key", "value"],
+            "additionalProperties": false,
+            "properties": {
+              "key": { "type": "string" },
+              "value": { "type": "string" }
+            }
+          }
+        }
+      },
+      "merge_into": { "type": "string" },
+      "disable": { "type": "boolean" }
+    }
+  },
+  "$defs": {
+    "stringOrList": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "action": {
+      "type": "object",
+      "required": ["action"],
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "enum": [
+            "send_sms",
+            "send_email",
+            "send_slack",
+            "tms_note",
+            "set_timer",
+            "create_hero_task",
+            "update_load_stage",
+            "update_load_state",
+            "internal_slack",
+            "no_action"
+          ]
+        },
+        "to_role": {
+          "type": "string",
+          "description": "driver, dispatcher, broker or hero."
+        },
+        "to_channel": { "type": "string" },
+        "template": { "type": "string" },
+        "body": { "type": "string" },
+        "subject": { "type": "string" },
+        "in_thread": { "enum": ["main", "new"] },
+        "request_key": { "type": "string" },
+        "after_minutes": { "type": "integer" },
+        "urgent": { "type": "boolean" },
+        "stage": { "type": "string" },
+        "reason": { "type": "string" }
+      }
+    }
+  }
+}

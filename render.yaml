@@ -1,0 +1,106 @@
+# Render blueprint for the freight load agent.
+#
+# One command brings up the whole topology:
+#
+#     render blueprint launch
+#
+# One service, because the stores are in-memory and therefore per-process.
+# The API and the timer worker share a process, so the worker can see the
+# timers the API arms and the escalation ladder advances. A separate worker
+# service would see an empty timer store and never escalate.
+#
+# The web service  - ingest webhooks, answer questions about loads, and fire
+#                    the escalation ladder's timers.
+#
+# When the Postgres stores land (ADR-0012, docs/PROPOSAL.md section 16), the
+# timer worker moves into its own service and the topology becomes the one in
+# the commented block at the bottom of this file.
+
+services:
+  - type: web
+    name: freight-agent-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # A paid plan: the free tier spins down after 15 minutes of inactivity,
+    # and a spinning-down container takes the in-memory event log with it.
+    plan: 0.5c-512mb
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: INTEGRATIONS_MODE
+        value: mock
+      - key: AGENT_REACTION_SECONDS
+        value: "60"
+      - key: PER_LOAD_BUDGET_USD
+        value: "0.50"
+      - key: RUN_DEADLINE_SECONDS
+        value: "240"
+      - key: LLM_ENABLED
+        value: "true"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: WEBHOOK_SECRET
+        generateValue: true
+      # The timer worker runs inside this process, on a thread.
+      - key: TIMER_WORKER_ENABLED
+        value: "true"
+      - key: TIMER_WORKER_POLL_SECONDS
+        value: "30"
+
+# The topology once the stores are shared between processes. Key Value is a
+# `services` entry, not a `databases` entry - the `databases` list is for
+# Render Postgres only.
+#
+# services:
+#   - type: web
+#     name: freight-agent-api
+#     runtime: docker
+#     dockerfilePath: ./Dockerfile
+#     dockerContext: .
+#     plan: 0.5c-512mb
+#     healthCheckPath: /healthz
+#     envVars:
+#       - key: DATABASE_URL
+#         fromDatabase:
+#           name: freight-agent-db
+#           property: connectionString
+#       - key: REDIS_URL
+#         fromService:
+#           name: freight-agent-kv
+#           type: keyvalue
+#           property: connectionString
+#
+#   - type: worker
+#     name: freight-agent-worker
+#     runtime: docker
+#     dockerfilePath: ./Dockerfile
+#     dockerContext: .
+#     plan: 0.5c-512mb
+#     dockerCommand: python -m freight_agent.workers.timer_worker
+#     envVars:
+#       - key: DATABASE_URL
+#         fromDatabase:
+#           name: freight-agent-db
+#           property: connectionString
+#
+#   - type: cron
+#     name: freight-agent-timer-scan
+#     runtime: docker
+#     dockerfilePath: ./Dockerfile
+#     dockerContext: .
+#     schedule: "*/1 * * * *"
+#     plan: 0.5c-512mb
+#     dockerCommand: python -m freight_agent.workers.timer_worker --once
+#
+#   - type: keyvalue
+#     name: freight-agent-kv
+#     plan: 256mb
+#     ipAllowList: []
+#
+# databases:
+#   - name: freight-agent-db
+#     databaseName: freight_agent
+#     plan: 0.5c-1g
+#     postgresMajorVersion: "16"

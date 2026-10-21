@@ -1,0 +1,44 @@
+# The local infrastructure: Postgres for the event log and the action ledger,
+# Redis for the budget counters and the event queue.
+#
+# The agent itself does not need either to run: the evaluation suite, the demo
+# and the CLI all work against the in-memory implementation of the storage
+# protocols. These are here for the day the persistence layer is swapped for
+# the real thing.
+#
+#     docker compose up -d
+#     DATABASE_URL=postgresql+psycopg://freight:freight@localhost:5432/freight
+#     REDIS_URL=redis://localhost:6379/0
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: freight
+      POSTGRES_PASSWORD: freight
+      POSTGRES_DB: freight
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U freight"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:
+  redis-data:
