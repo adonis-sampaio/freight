@@ -66,6 +66,12 @@ class LoadRegistration(BaseModel):
     contacts: list[dict[str, Any]] = Field(default_factory=list)
     stops: list[dict[str, Any]] = Field(default_factory=list)
     instructions: str = ""
+    # The load's one main email thread. Without it the escalation ladder
+    # cannot email the dispatcher, because the email has to go into that
+    # thread rather than start a new one.
+    email_thread_id: str | None = None
+    commodity: str | None = None
+    shipper: str | None = None
 
 
 class DecisionView(BaseModel):

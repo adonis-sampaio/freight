@@ -46,8 +46,11 @@ services:
       # The timer worker runs inside this process, on a thread.
       - key: TIMER_WORKER_ENABLED
         value: "true"
+      # The escalation ladder's windows are 30 minutes, so the scan interval
+      # only affects how promptly a timer fires. Five seconds keeps a demo
+      # brisk and costs one dict scan.
       - key: TIMER_WORKER_POLL_SECONDS
-        value: "30"
+        value: "5"
 
 # The topology once the stores are shared between processes. Key Value is a
 # `services` entry, not a `databases` entry - the `databases` list is for

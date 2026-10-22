@@ -197,6 +197,28 @@ def test_the_in_process_worker_advances_the_escalation_ladder(settings: Settings
     assert "ask_driver_again" in step_ids, "the worker never fired the timer"
 
 
+def test_a_load_registration_keeps_the_main_email_thread(settings: Settings) -> None:
+    """The dispatcher email goes into the load's main thread.
+
+    The third rung of the escalation ladder emails the dispatcher *in the
+    main thread*, so a load registered without a thread id cannot be
+    escalated. The registration must carry it through.
+    """
+    runtime = AgentRuntime.create(settings)
+    with TestClient(create_app(settings, runtime=runtime)) as client:
+        response = client.post(
+            "/loads",
+            json={
+                "load_id": "481999",
+                "client_id": "client_a",
+                "email_thread_id": "thread-northline-481999",
+                "contacts": [],
+            },
+        )
+        assert response.status_code == 201
+        assert runtime.state_for("481999").main_thread_id == "thread-northline-481999"
+
+
 def test_a_worker_in_another_process_cannot_see_the_api_timers(settings: Settings) -> None:
     """Why the deployed service is one process, and not three.
 

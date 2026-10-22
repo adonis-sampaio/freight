@@ -169,3 +169,5 @@ procedure, and the resolved procedure records which file each step came from.
    alternative that was rejected.
 4. [`docs/RUNNING.md`](docs/RUNNING.md) - running it locally, deploying it,
    operating it.
+5. [`docs/ASSESSMENT-ANSWERS.md`](docs/ASSESSMENT-ANSWERS.md) - direct answers
+   about agent architecture, SOPs, memory, evals, and scale.
